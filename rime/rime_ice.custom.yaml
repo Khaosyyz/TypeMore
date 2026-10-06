@@ -1,0 +1,9 @@
+# typemore:启用 n-gram 语法模型 + 挂载 typemore.lua
+#
+# 语法模型:引擎给候选词排序时,额外参考"当前已上屏的语境下,接这个候选是否自然"
+#          ——整句转换时也靠它在多种切词方式里挑总概率最高的组合(如 确实/缺失 消歧)。
+#          依赖 grammar.yaml 与 zh-hans-t-essay-bgw.gram(LGPL-3,lotem/rime-octagram-data)。
+# typemore.lua:语境加权过滤(侧车写加分表)+ 学习清单落库(写 userdb)+ 选词转发(feed 日志)。
+patch:
+  __include: grammar:/hans
+  engine/filters/@next: lua_filter@typemore

@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+runtime/
+
+# 引擎构建产物(源码入库,产物不入库)
+engine/bin/
+engine/lib/
+engine/build*/
+engine/deps/boost/
+engine/env.bat
+engine/librime.pc

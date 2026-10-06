@@ -1,0 +1,30 @@
+api:
+  base_url: https://api.deepseek.com/chat/completions
+  key_env: DEEPSEEK_API_KEY
+  model: deepseek-flash
+  temperature: 0
+  thinking_disabled: true
+  timeout_ms: 30000
+
+correction:
+  interval_chars: 10
+  system_prompt: |-
+    The user is typing. Below is other context from the input environment:
+    {context}
+    Based on this context, replace wrong characters in the user's input. Do not modify or add any punctuation. Do not add any new text. Only make simple substitutions based on the contextual relationship. Reply with only the corrected content, which will be used to overwrite the original.
+
+context:
+  max_nodes: 400
+  max_depth: 8
+  uia_timeout_ms: 3000
+  capture_min_interval_ms: 500
+  max_boost_words: 50
+  boost_cap: 5.0
+  max_context_chars: 1000
+
+segmentation:
+  learn_word_freq: 100000
+  pinyin_fallback: true
+
+channel:
+  dir: runtime

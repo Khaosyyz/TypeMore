@@ -10,3 +10,5 @@ engine/build*/
 engine/deps/boost/
 engine/env.bat
 engine/librime.pc
+engine/deps/*.tar.gz
+engine/deps/boost/

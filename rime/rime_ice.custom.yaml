@@ -6,4 +6,6 @@
 # typemore.lua:语境加权过滤(侧车写加分表)+ 学习清单落库(写 userdb)+ 选词转发(feed 日志)。
 patch:
   __include: grammar:/hans
-  engine/filters/@next: lua_filter@typemore
+  engine/filters/@next: lua_filter@*typemore
+  typemore/boost_scan: 50
+  typemore/learn_commits: 100

@@ -1,5 +1,5 @@
 -- typemore 引擎侧:语境加权过滤 + 学习清单落库 + 选词转发
--- 三个通道文件均在 rime 用户目录,侧车原子写入(os.replace),引擎侧只读/追加
+-- 三个通道文件均在引擎用户目录;侧车原子写,本侧只读/追加
 local M = {}
 
 local function read_lines(path)
@@ -18,6 +18,9 @@ end
 
 function M.init(env)
     env.dir = rime_api.get_user_data_dir()
+    local config = env.engine.schema.config
+    env.boost_scan = config:get_int("typemore/boost_scan") or 50
+    env.learn_commits = config:get_int("typemore/learn_commits") or 100
     env.mem = Memory(env.engine, env.engine.schema)
     env.learn_seq = 0
     env.last_input = ""
@@ -50,7 +53,7 @@ local function apply_learn(env)
     end
     env.learn_seq = seq
     for i = 2, #lines do
-        local w, py = lines[i]:match("^(%C+)%s+([a-z ]+)$")
+        local w, py = lines[i]:match("^(%S+)%s+([a-z ]+)$")
         if w and py then
             local e = DictEntry()
             e.text = w
@@ -58,7 +61,7 @@ local function apply_learn(env)
             if env.mem.start_session then
                 env.mem:start_session()
             end
-            env.mem:update_userdict(e, 1, "")
+            env.mem:update_userdict(e, env.learn_commits, "")
             if env.mem.finish_session then
                 env.mem:finish_session()
             end
@@ -79,14 +82,30 @@ local function read_boost(env)
     return boost
 end
 
+-- 过滤阶段改 quality 不重排;取前 boost_scan 个候选按加分重排后先行 yield
 function M.func(translation, env)
+    env.last_input = env.engine.context.input or env.last_input
     apply_learn(env)
     local boost = read_boost(env)
+    local head, n = {}, 0
     for cand in translation:iter() do
-        local b = boost[cand.text]
-        if b and b > 0 then
-            cand.quality = cand.quality + b
+        if n < env.boost_scan then
+            n = n + 1
+            head[n] = { cand = cand, score = boost[cand.text] or 0, idx = n }
+        else
+            break
         end
+    end
+    table.sort(head, function(a, b)
+        if a.score ~= b.score then
+            return a.score > b.score
+        end
+        return a.idx < b.idx
+    end)
+    for _, item in ipairs(head) do
+        yield(item.cand)
+    end
+    for cand in translation:iter() do
         yield(cand)
     end
 end

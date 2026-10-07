@@ -4,6 +4,9 @@ set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX ${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_fla
 cmake_minimum_required(VERSION 3.12)
 project(rime)
 set(CMAKE_CXX_STANDARD 17)
+if(MSVC)
+  add_compile_options(/utf-8)
+endif()
 
 set(rime_version 1.17.0)
 set(rime_soversion 1)

@@ -26,5 +26,11 @@ segmentation:
   learn_word_freq: 100000
   pinyin_fallback: true
 
+hotkeys:
+  toggle: "Ctrl+Space"
+  clear_composition: "Esc"
+  backspace: "Backspace"
+  double_space_window: 1.5
+
 channel:
   dir: runtime

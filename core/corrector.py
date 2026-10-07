@@ -13,6 +13,7 @@ class Corrector:
         self.learner = learner
         self.context_text = context_text_fn
         self._pending = 0
+        self._key_warned = False
         self._interval = cfg["correction"]["interval_chars"]
         self._wake = threading.Event()
         self._stop = threading.Event()
@@ -67,6 +68,10 @@ class Corrector:
             )
             r.raise_for_status()
             new_text = r.json()["choices"][0]["message"]["content"].strip()
+        except KeyError as e:
+            if not self._key_warned:
+                self._key_warned = True
+                print(f"[corrector] 环境变量 {e} 未设置,云端矫正停用(setx 后重开终端生效)")
         except Exception as e:
             print(f"[corrector] {e}")
             return

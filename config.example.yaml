@@ -1,6 +1,6 @@
 api:
   base_url: https://api.deepseek.com/chat/completions
-  key: sk-c658d8a3040d407c83e0305aef51e538
+  key: ""
   model: deepseek-flash
   temperature: 0
   thinking_disabled: true

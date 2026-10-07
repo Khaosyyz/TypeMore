@@ -1,4 +1,3 @@
-import os
 import threading
 
 import requests
@@ -48,6 +47,12 @@ class Corrector:
         if not snap.text.strip():
             return
         api = self.cfg["api"]
+        key = api.get("key")
+        if not key:
+            if not self._key_warned:
+                self._key_warned = True
+                print("[corrector] config.yaml 未填 api.key,云端矫正停用")
+            return
         body = {
             "model": api["model"],
             "messages": [
@@ -59,22 +64,18 @@ class Corrector:
         }
         if api.get("thinking_disabled"):
             body["thinking"] = {"type": "disabled"}
+        new_text = None
         try:
             r = requests.post(
                 api["base_url"],
-                headers={"Authorization": f"Bearer {os.environ[api['key_env']]}"},
+                headers={"Authorization": f"Bearer {key}"},
                 json=body,
                 timeout=api["timeout_ms"] / 1000,
             )
             r.raise_for_status()
             new_text = r.json()["choices"][0]["message"]["content"].strip()
-        except KeyError as e:
-            if not self._key_warned:
-                self._key_warned = True
-                print(f"[corrector] 环境变量 {e} 未设置,云端矫正停用(setx 后重开终端生效)")
         except Exception as e:
             print(f"[corrector] {e}")
-            return
         if not new_text:
             return
         self.buffer.replace_from_snapshot(snap, new_text)

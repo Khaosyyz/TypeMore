@@ -57,6 +57,11 @@ class Buffer:
             self._slots = head + self._slots[len(snap.text):]
             return True
 
+    def delete_last(self):
+        with self._lock:
+            if self._slots:
+                self._slots.pop()
+
     def commit(self):
         with self._lock:
             text = "".join(s[0] for s in self._slots)

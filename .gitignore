@@ -11,4 +11,5 @@ engine/deps/boost/
 engine/env.bat
 engine/librime.pc
 engine/deps/*.tar.gz
-engine/deps/boost/
+# 本地配置含 API 密钥,不入库(仓库内保留 config.example.yaml)
+config.yaml

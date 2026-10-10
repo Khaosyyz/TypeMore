@@ -9,20 +9,24 @@ import uiautomation as uia
 _WINEVENTPROC = ctypes.WINFUNCTYPE(
     None, wintypes.HWND, ctypes.c_uint, wintypes.HWND, ctypes.c_long, ctypes.c_long, ctypes.c_uint, ctypes.c_uint
 )
+_TIMERPROC = ctypes.WINFUNCTYPE(None, wintypes.HWND, ctypes.c_uint, ctypes.c_void_p, wintypes.DWORD)
 EVENT_SYSTEM_FOREGROUND = 0x0003
 EVENT_OBJECT_FOCUS = 0x8005
 WM_QUIT = 0x0012
 WM_WAKEUP = 0x0401
+CARET_TIMER_MS = 200
 
 
 class ContextService:
-    """语境服务:聚焦是唯一信号——聚焦一次抓一次,全量覆盖加分表与语境原文。
+    """语境服务:聚焦是唯一内容信号——聚焦一次抓一次,全量覆盖加分表与语境原文。
+    光标定位(独立于内容刷新)由定时器在泵线程上持续跟踪,供候选窗锚定。
     所有 uia COM 调用必须与 COM 初始化同线程且该线程泵消息,因此收敛到 _pump 单线程。"""
 
     def __init__(self, cfg, channel):
         self._cfg = cfg["context"]
         self._channel = channel
         self.last_text = ""
+        self.caret_pos = None
         self._last = 0.0
         self._last_hwnd = None
         self._nodes = 0
@@ -42,9 +46,10 @@ class ContextService:
         uia.InitializeUIAutomationInCurrentThread()
         self._thread_id = threading.get_ident()
         user32 = ctypes.windll.user32
-        self._keep = [_WINEVENTPROC(self._on_event)]
+        self._keep = [_WINEVENTPROC(self._on_event), _TIMERPROC(self._on_caret_timer)]
         user32.SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, None, self._keep[0], 0, 0, 0)
         user32.SetWinEventHook(EVENT_OBJECT_FOCUS, EVENT_OBJECT_FOCUS, None, self._keep[0], 0, 0, 0)
+        user32.SetTimer(None, 1, CARET_TIMER_MS, self._keep[1])
         msg = wintypes.MSG()
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             user32.TranslateMessage(ctypes.byref(msg))
@@ -56,6 +61,22 @@ class ContextService:
     def _on_event(self, *args):
         self._evt_pending = True
         ctypes.windll.user32.PostThreadMessageW(self._thread_id, WM_WAKEUP, 0, 0)
+
+    def _on_caret_timer(self, *args):
+        """光标定位定时器:仅更新位置缓存,与语境内容刷新无关"""
+        try:
+            ctrl = uia.GetFocusedControl()
+            if not ctrl:
+                return
+            tp = ctrl.GetTextPattern()
+            sel = tp.GetSelection()
+            r = sel[0] if isinstance(sel, (list, tuple)) else sel
+            rects = r.GetBoundingRectangles()
+            if rects:
+                rc = rects[-1]
+                self.caret_pos = (int(rc.left), int(rc.bottom))
+        except Exception:
+            self.caret_pos = None
 
     def _capture_if(self):
         try:

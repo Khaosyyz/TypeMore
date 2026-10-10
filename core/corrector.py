@@ -78,5 +78,8 @@ class Corrector:
             print(f"[corrector] {e}")
         if not new_text:
             return
-        self.buffer.replace_from_snapshot(snap, new_text)
-        self.learner.process(snap.text, new_text)
+        changed = sum(1 for a, b in zip(snap.text, new_text) if a != b) + abs(len(snap.text) - len(new_text))
+        print(f"[矫正] {len(snap.text)}字 → {len(new_text)}字,变化 {changed} 处")
+        if changed:
+            self.buffer.replace_from_snapshot(snap, new_text)
+            self.learner.process(snap.text, new_text)

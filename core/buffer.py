@@ -12,6 +12,7 @@ class Buffer:
     def __init__(self, on_append=None, on_commit=None):
         self._slots = []
         self._gen = 0
+        self.debug = False
         self.on_append = on_append
         self.on_commit = on_commit
         self._lock = threading.RLock()
@@ -40,6 +41,8 @@ class Buffer:
             aligned = sylls is not None and len(sylls) == len(text)
             for i, ch in enumerate(text):
                 self._slots.append((ch, sylls[i] if aligned else None))
+        if self.debug:
+            print(f"[缓冲区] 进字 {text!r} 拼音对齐={aligned}")
         if self.on_append:
             self.on_append(len(text))
 
@@ -51,22 +54,30 @@ class Buffer:
         """只替换快照覆盖的前缀段;世代不符(期间提交过)返回 False"""
         with self._lock:
             if snap.gen != self._gen:
+                if self.debug:
+                    print(f"[缓冲区] 替换放弃(世代不符 {snap.gen}≠{self._gen})")
                 return False
             inherit = len(new_text) == len(snap.text)
             head = [(ch, snap.sylls[i] if inherit else None) for i, ch in enumerate(new_text)]
             self._slots = head + self._slots[len(snap.text):]
-            return True
+        if self.debug:
+            print(f"[缓冲区] 矫正替换 → {new_text!r} 拼音继承={inherit}")
+        return True
 
     def delete_last(self):
         with self._lock:
             if self._slots:
-                self._slots.pop()
+                ch, _ = self._slots.pop()
+        if self.debug:
+            print(f"[缓冲区] 退格删 {ch!r}")
 
     def commit(self):
         with self._lock:
             text = "".join(s[0] for s in self._slots)
             self._slots = []
             self._gen += 1
+        if self.debug:
+            print(f"[缓冲区] 整段提交 {text!r} (世代→{self._gen})")
         if self.on_commit:
             self.on_commit()
         return text

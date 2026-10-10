@@ -16,8 +16,10 @@ class Learner:
         self.fallback = seg["pinyin_fallback"]
 
     def process(self, old_text, new_text):
-        words = set(self._diff_pairs(old_text, new_text))
-        words |= set(jieba.lcut(new_text))
+        diff_pairs = self._diff_pairs(old_text, new_text)
+        seg_words = list(jieba.lcut(new_text))
+        print(f"[学习] diff词对: {diff_pairs or '无'} | 分词: {seg_words}")
+        words = set(diff_pairs) | set(seg_words)
         items = []
         for w in words:
             if w.isascii():
@@ -30,6 +32,7 @@ class Learner:
             self.channel.write_learn(items)
             for w, _ in items:
                 jieba.add_word(w, freq=self.word_freq)
+            print(f"[学习] 写清单 {len(items)} 条: {items}")
         return items
 
     def _diff_pairs(self, old, new):

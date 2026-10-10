@@ -27,6 +27,9 @@ class ContextService:
         self._channel = channel
         self.last_text = ""
         self.caret_pos = None
+        self.editable = False
+        self.is_password = False
+        self._focus_state = ""
         self._last = 0.0
         self._last_hwnd = None
         self._nodes = 0
@@ -63,20 +66,40 @@ class ContextService:
         ctypes.windll.user32.PostThreadMessageW(self._thread_id, WM_WAKEUP, 0, 0)
 
     def _on_caret_timer(self, *args):
-        """光标定位定时器:仅更新位置缓存,与语境内容刷新无关"""
+        """光标/焦点状态探测器:仅更新缓存(位置、可编辑、密码),与语境内容刷新无关"""
         try:
             ctrl = uia.GetFocusedControl()
             if not ctrl:
                 return
-            tp = ctrl.GetTextPattern()
-            sel = tp.GetSelection()
-            r = sel[0] if isinstance(sel, (list, tuple)) else sel
-            rects = r.GetBoundingRectangles()
-            if rects:
-                rc = rects[-1]
-                self.caret_pos = (int(rc.left), int(rc.bottom))
+            ctype = ctrl.ControlTypeName
+            name = (ctrl.Name or "")[:24]
+            pw = False
+            try:
+                pw = bool(ctrl.GetPropertyValue(uia.PropertyId.IsPasswordPropertyId))
+            except Exception:
+                pass
+            caret = None
+            try:
+                tp = ctrl.GetTextPattern()
+                sel = tp.GetSelection()
+                r = sel[0] if isinstance(sel, (list, tuple)) else sel
+                rects = r.GetBoundingRectangles()
+                if rects:
+                    rc = rects[-1]
+                    caret = (int(rc.left), int(rc.bottom))
+            except Exception:
+                pass
+            editable = (caret is not None or ctype == "EditControl") and not pw
+            state = f"{ctype}|{name}"
+            if state != self._focus_state:
+                self._focus_state = state
+                print(f"[焦点] {ctype} '{name}' 可编辑={editable} 密码={pw}")
+            self.editable = editable
+            self.is_password = pw
+            if caret:
+                self.caret_pos = caret
         except Exception:
-            self.caret_pos = None
+            pass
 
     def _capture_if(self):
         try:

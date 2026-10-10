@@ -53,6 +53,7 @@ class Corrector:
                 self._key_warned = True
                 print("[corrector] config.yaml 未填 api.key,云端矫正停用")
             return
+        print(f"[矫正] 触发(缓冲区 {len(snap.text)}字): {snap.text!r}")
         body = {
             "model": api["model"],
             "messages": [
@@ -79,7 +80,7 @@ class Corrector:
         if not new_text:
             return
         changed = sum(1 for a, b in zip(snap.text, new_text) if a != b) + abs(len(snap.text) - len(new_text))
-        print(f"[矫正] {len(snap.text)}字 → {len(new_text)}字,变化 {changed} 处")
+        print(f"[矫正] 结果({changed}处变化): {new_text!r}")
         if changed:
             self.buffer.replace_from_snapshot(snap, new_text)
             self.learner.process(snap.text, new_text)

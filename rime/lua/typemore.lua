@@ -65,7 +65,8 @@ local function apply_learn(env)
             if env.mem.finish_session then
                 env.mem:finish_session()
             end
-            log.info("[typemore] learned: " .. w .. " <- " .. py)
+            -- 调试期用 error 级别保证控制台可见(glog INFO 只进文件);回生产改 log.info
+            log.error("[typemore] learned: " .. w .. " <- " .. py)
         end
     end
 end
